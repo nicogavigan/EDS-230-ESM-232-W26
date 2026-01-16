@@ -19,8 +19,6 @@ library(ggpubr)
 library(here)
 ```
 
-
-
 ## What we are learning so far {.scrollable}
 
 How to find the "right" tool for the job
@@ -35,7 +33,7 @@ How to find the "right" tool for the job
 
     -   some parameters impact model transfer function, other I/O formatting
 
-# Answer to visual check 
+# Answer to visual check
 
 # My code to find issue and clean data {.scrollable}
 
@@ -91,7 +89,7 @@ site1 <- solarpv(area = 0.1, solar = sierraczosolar)
 
 ## Playing with models {.scrollable}
 
-::: {.concept-box}
+::: concept-box
 We often build models to try different options
 
 **Model inputs**: solar radiation (daily direct and diffuse)
@@ -101,9 +99,11 @@ We often build models to try different options
 **Parameters**: panel efficiency, system performance, units, type of array (uses diffuse or not), plot Y/N
 :::
 
+-   what is the impact of the uncertainty?
+
 How would a lower efficiency impact mean power generated?
 
-*eff* – 0.6 instead of default 0.8  
+*eff* – 0.6 instead of default 0.8
 
 try it
 
@@ -124,13 +124,18 @@ site2$mean
 
 # relative difference in parameter
 (0.6-0.8)/0.8 * 100
+
+# relative efficiency
+# (new - base)/base 
+# how much does your output change based on the baseline parameter 
+# -25 = 25% decline
 ```
 
+-   When testing model efficacy, it is a good idea to use hypothetical cases where if you alter an input, you know the intended effect on the model. (ie. precip = 0, streamflow must = 0. If not, something is wrong with a model)
 
 ## Informal Sensitivity Analysis {.scrollable}
 
-What happens when we vary parameters?
-  * Not always obvious when transfer function is non-linear or multi-part
+What happens when we vary parameters? \* Not always obvious when transfer function is non-linear or multi-part
 
 **Informal** - just try varying parameters
 
@@ -192,9 +197,9 @@ eff <- rnorm(mean = 0.6, sd = 0.1, n = 20)
 # use map from purrr to run model for all values of eff
 # notice how map adds the one parameter that is missing from the input list
 
-site2 <- eff %>% map(~ solarpv(area = 0.1, 
+site2 <- eff %>% map(~ solarpv(area = 0.1, # give it all parameters
   solar = sierraczosolar, clr = "green", 
-  eunit = "kWhr", g = FALSE, etype = "direct", eff = .x))
+  eunit = "kWhr", g = FALSE, etype = "direct", eff = .x)) # eff = .x tells the map function to substitute the efficiency with the values that you are piping into the map function
 
 head(site2)
 ```
@@ -208,29 +213,35 @@ head(site2)
 -   R often returns lists - but not so easy for organization
 
 -   ask yourself what you want to do with the data, then put in a structure that will make this easy
-  -  a data frame is often the best structure for graphing
+
+-   a data frame is often the best structure for graphing
 
 -   e.g two different data frames
 
     -   plot variation in mean annual electricity by *eff*
     -   plot variation in each year due to variation in *eff*
-   
 
 ```{r sen1b, eval=T}
-
+# structure command helps you know the structure of your output
 head(str(site2))
 # this is pretty messy - but we can extract a useful data structure,lets say we want
 # just the annual data (not the mean annual time series), and then reformat as a data frame with nice column names
-tmp <- map_dfr(site2, `[`, c("annual"))
+# map_dfr extract the annual results 
+tmp <- map_dfr(site2, `[`, c("annual")) # '[' is the function
 
+tmp$annual
 # convert from tibble to a data frame
 site2df <- data.frame(year = tmp$annual$year, elect = tmp$annual$elect)
 head(site2df)
+
+#site2[[1]] will give you the list of the first parameter 
+#site2[[2]]$mean will give you the mean of the second input parameter
 ```
 
 ## Looking at results from informal sensitivity analysis {.scrollable}
 
 -   [Box plots or Violin Plots of Model Output (where box shows effect of parameter uncertainty)]{style="color: green;"}
+    -   you don't care what the input is, you just want to visualize the effect of the uncertainty. you're saying how variable/ uncertain is my model output.
 
 WHY: To see how big the range of output might be relative to "uncertain" parameter range
 
@@ -254,15 +265,19 @@ WHY: If you want the one number that is the "best guess" given uncertainty
 ggplot(site2df, aes(year, elect, group = year)) +
   geom_boxplot() +
   labs(y = "Electricity generated in kWhr")
+
+# tells you for each year, what is my electricity -- but also, what is the range of my electricity 
+# lets say you need min 0.006 -- most of the time you will get that. but there are some years where on the lower end you will not reach that value. 
+# this informs level of risk
 ```
 
 ## Add an average or median line
 
 **Why?**
 
-- Summarizes parameter uncertainty  
-- Highlights interannual trends  
-- Easier comparison across years
+-   Summarizes parameter uncertainty\
+-   Highlights interannual trends\
+-   Easier comparison across years
 
 ## Plot {.scrollable}
 
@@ -277,6 +292,8 @@ ggplot(site2df, aes(year, elect, group = year)) +
   geom_boxplot() +
   labs(y = "Electricity in W") +
   geom_line(data = site2_average, aes(year, elect, group = 1), col = "orange", lwd=2)
+
+# the mean value across parameter uncertainty
 ```
 
 ## How does efficiency impact mean annual electricity estimate {.scrollable}
@@ -303,11 +320,13 @@ site2_mean <- data.frame(eff = eff, elect = tmp)
 -   how does the variation in parameter impact model output
 
 ```{r sene2, eval=T, echo=TRUE}
+# what's the variation in my mean annual electricity 
 ggplot(site2_mean, aes(y = mean)) +
   geom_boxplot(fill="yellow") +
   labs(y = "Electricity in kWhr")
 
 # or to see what the sensitivity looks like
+# given my solar efficiency, what my electricity is 
 ggplot(site2_mean, aes(eff, mean)) +
   geom_point(size=2, col="orange") +
   labs(y = "Electricity in kWhr", x = "Solar Efficiency")
@@ -319,7 +338,10 @@ mean(site2_mean$mean)
 # Sensitivity and Uncertainty
 
 -   **Sensitivity analysis** is a way to explore how model outputs change when inputs or parameters are varied
+    -   You might know, for example, what the values are going to be. You still want to know how sensitive your outputs are to that change in values.
 -   **Uncertainty analysis** is a way to quantify the uncertainty in model outputs due to uncertainty in inputs or parameters
+    -   I have uncertainty in my fish population because I have uncertainty in how much hunting there will be.
+        -   Vs. Sensitivity = if hunting changes x amount, fish population will vary by y amount
 
 Sensitivity is more general - and the first step in uncertainty analysis, but also useful for answering model questions - is exposure to pollutants sensitivity to changes in climate inputs
 
