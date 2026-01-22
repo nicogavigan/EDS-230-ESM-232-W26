@@ -1,0 +1,91 @@
+---
+title: "ESM 232 - Lab 1"
+author: "Nico Gavigan"
+format: html
+editor: visual
+---
+
+# Notes
+
+Common practice to have function name the same as the data file name
+
+There is a style guide in R that shows tidyverse best practices for functions.
+
+#### Example of function in Assignment 1
+
+```{r}
+# solar_energy.R          # function "arguments"
+solar_energy <- function(A, r = 0.2, H, PR = 0.75) {
+  
+  # Calculate and return E
+  E = A * r * H * PR
+  # Returns can be explicit but it returns E anyways in this case 
+  return(E) # I think this goes here but might be outside of brackets
+}
+
+# Ex of what not to do
+solar_energy <- function(A, r, H, PR) {
+  r = 0.2    # this is called "hard-coding" a value and is not recommended
+  PR = 0.75
+  
+  E = A * r * H * PR
+}
+```
+
+## Sensitivity Analysis with ethresh
+
+-   Assume +- 15% uncertainty in ethresh parameter (uniform distribution)
+
+-   Default values (from the function) is 10,000
+
+-   Code so that it is easy to change the uncertainty
+
+-   Think about a data structure to allow us to see how uncertainty impacts annual power estimation for each year, or mean annual power generation
+
+```{r}
+# Source the model
+source(here("R/solarpv.R"))
+
+# read in R formatted data
+load(here("Data/sierraczosolar_clean.rda"))
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(purrr)
+```
+
+```{r}
+# Assume +-15% uncertainty in ethresh parameter (uniform distribution)
+
+ethresh <- rnorm(mean = 10000, sd = 0.15*10000, n = 20)
+
+site3 <- ethresh |> map(~ solarpv(area = 0.1, solar = sierraczosolar, etype = "direct", 
+                                  ethresh = .x))
+
+plot(ethresh)
+
+head(site3)
+print(site3)
+```
+
+```{r}
+# Ojas method
+deviation <- 0.15
+base_thresh <- 10000
+ethresh <- runif(
+  min = base_thresh - deviation * base_thresh,
+  max = base_thresh + deviation * base_thresh, n = 40
+)
+
+plot(ethresh)
+```
+
+```{r}
+ tmp <0 map_df(site2, '[', c("annual"))
+ site2df <- data.frame(
+   year = tmp$annual$year
+   elec = tmp$annual$year
+ )
+```
