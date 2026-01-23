@@ -20,7 +20,6 @@ library(here)
 
 ## Answer to challenge from last class {.scrollable}
 
-
 ```{r valuep, echo=TRUE}
 source(here("R/compute_NPV.R"))
 source(here("R/compute_profit_frompower_priceV.R"))
@@ -61,8 +60,9 @@ profit_solar_random <- compute_profit_frompower_priceV(
   profit_solar_random %>% mutate(scenario = "random price"))
 
 ```
-    
+
 ## Plot
+
 ```{r solarprofit, echo=TRUE}
 p1 = ggplot(combine_profit, aes(as.factor(year), netpre, fill = scenario)) +
   geom_boxplot() +
@@ -89,8 +89,6 @@ include_graphics(here("lectures_qmd/img/power_comparison_figure.jpeg" ))
 -   Power generation from solar radiation (solarpv.R)
 -   Power generation from reservoir height and flow rate (power_gen.R))
 -   Profit from power generation (compute_profit_frompower.R) (net present value) (compute_NPV.R)
-
- 
 
 ## Putting it all together {.scrollable}
 
@@ -256,8 +254,6 @@ sd(profit_solar$netpre)
 
 ```
 
-
-
 ## What we discovered
 
 While hydro profits are higher - they are more uncertain
@@ -270,22 +266,18 @@ Note - we considered uncertainty in just a few parameters Would accounting for u
 
 If we wanted to reduce uncertainty in hydro profits - what measurements would we make? (or what parameter might we focus on?) How would we figure that out? (something to think about)
 
-
 ## Workflow ideas
 
+-   start with submodel sensitivity analysis
+-   hydro - *eff, height, flow rate*
+-   solar - *eff, ethresh, solar, PR, area*
+-   build multi component model
+-   additional sensitivity analysis (price, discount rate)
 
- * start with submodel sensitivity analysis 
-  * hydro - *eff, height, flow rate*
-  * solar - *eff, ethresh, solar, PR, area*
- * build multi component model
-  * additional sensitivity analysis (price, discount rate)
-  
-  Could build a wrapper to do this
-  
-  Models will often have a data structure (or file) that parameter values to explore
-  * could build a function to read this in and run the model for each parameter set
-  
-  
+Could build a wrapper to do this
+
+Models will often have a data structure (or file) that parameter values to explore \* could build a function to read this in and run the model for each parameter set
+
 # Summary {.scrollable}
 
 -   we built a multi component model to compare profit from two different power sources
@@ -295,7 +287,6 @@ If we wanted to reduce uncertainty in hydro profits - what measurements would we
 -   we included parameter uncertainty analysis to see how that impacted our profit estimates
 
 -   we saw how data organization is an important part of informal sensitivity analysis to make it easier to graph and analyze results
-
 
 ## What you can know about sensitivity before experimenting {.scrollable}
 
@@ -325,7 +316,7 @@ if $k_P$ is 0.002 and $k_T$ is 0.01 does that mean parrot suitability is more se
 
 Coefficient values - depends on what range in **T** and **P** so its hard to tell just from the coefficients
 
-<span style="color: blue;"> *IF* </span> **P** and **T** were in the same units (e.g percent deviation from a mean value), then you could use the coefficients to tell you if parrot suitability would be more sensitive to a 10% change in precipitation versus a 10% change in temperature
+[ *IF* ]{style="color: blue;"} **P** and **T** were in the same units (e.g percent deviation from a mean value), then you could use the coefficients to tell you if parrot suitability would be more sensitive to a 10% change in precipitation versus a 10% change in temperature
 
 $$
  PS = k_P * (P-Pavg)/Pavg + k_T * (T-Tavg)/Tavg
@@ -339,9 +330,9 @@ They are *linear* models
 
 The coefficients and standard error tell you about sensitivity
 
-- larger coefficients = output more sensitive to variation in the "variable"
+-   larger coefficients = output more sensitive to variation in the "variable"
 
-- smaller standard error = more confidence in coefficient
+-   smaller standard error = more confidence in coefficient
 
 ## When do we need to do sensitivity analysis {.scrollable}
 
@@ -352,7 +343,6 @@ The coefficients and standard error tell you about sensitivity
 -   BUT if you don't know what's in the box (transfer function) or if it has multiple boxes its difficult to tell
 
 -   any equation/transfer function with thresholds (if's, max, min's) hard to tell (you can't differentiate), sometimes parameters may matter sometimes they will not
-
 
 What do we do then...explore...and
 
