@@ -316,7 +316,7 @@ if $k_P$ is 0.002 and $k_T$ is 0.01 does that mean parrot suitability is more se
 
 Coefficient values - depends on what range in **T** and **P** so its hard to tell just from the coefficients
 
-[ *IF* ]{style="color: blue;"} **P** and **T** were in the same units (e.g percent deviation from a mean value), then you could use the coefficients to tell you if parrot suitability would be more sensitive to a 10% change in precipitation versus a 10% change in temperature
+[*IF*]{style="color: blue;"} **P** and **T** were in the same units (e.g percent deviation from a mean value), then you could use the coefficients to tell you if parrot suitability would be more sensitive to a 10% change in precipitation versus a 10% change in temperature
 
 $$
  PS = k_P * (P-Pavg)/Pavg + k_T * (T-Tavg)/Tavg
