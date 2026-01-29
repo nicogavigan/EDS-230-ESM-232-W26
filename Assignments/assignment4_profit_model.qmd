@@ -1,0 +1,101 @@
+---
+title: "Assignment #4"
+author: "Nico Gavigan & Zach Loo"
+date: "January 23, 2026"
+output: html_document
+format: 
+  html:
+    embed-resources: true
+    toc: true
+execute:
+  warning: false
+  message: false
+theme: "minty"
+---
+
+```{r}
+library(here)
+library(tidyverse)
+library(purrr)
+library(dplyr)
+
+source(here("Assignments/assignment_3_nico.R"), local = globalenv())
+```
+
+## Almond Profit Model
+
+```{r}
+# ALMOND PROFIT MODEL
+#---------------------------------------
+# Yield equation: 
+#       Y = (Ye + Ya) * A
+# Y : Yield (ton)
+# Ye: Expected Yield (ton/acre)
+# Ya: Yield Anomoly (ton/acre)
+# A: Area (acre)
+
+# Revenue equation:
+#       R = Y * Pr
+# R: Revenue ($USD)
+# Y: Yield (ton)
+# Pr: Price ($USD/ton)
+
+# Cost equation: 
+#       C = (L + W + E) * A
+# C: Cost ($USD)
+# L: Total Labor Cost ($USD/acre)
+# W: Total Water Cost ($USD/acre)
+# E: Total Energy Cost ($USD/acre)
+# A: Area (acre)
+
+# Profit equation: 
+#       P = R - C
+# P: Profit ($USD)
+# R: Revenue ($USD)
+# C: Cost ($USD)
+
+
+profit_model <- function(Ye = 100, Ya, A = 10, Pr = 4000, 
+                         L = 500, W = 700, E = 70){
+  
+  Y = (Ye + Ya) * A
+  R = Y * Pr
+  C = (L + W + E) * A
+  P = R - C
+
+  return(P)
+}
+```
+
+## Sensitivity Analysis 
+
+```{r}
+# GENERATE SAMPLES FOR BOTH PARAMETERS
+nsamples <- 300
+Pr <- rnorm(mean = 4000, sd = 0.15 * 4000, n = nsamples)
+Ya <- yearly_Ya$Ya
+
+set.seed(1)
+Ya <- sample(yearly_Ya$Ya, size = 300, replace = TRUE)
+parms <- cbind.data.frame(Pr, Ya)
+
+results <- parms |> pmap_dbl(profit_model, Ye = 500, A = 10, L = 500, W = 700, E = 70)
+results_df <- cbind.data.frame(profit = results, parms)
+```
+
+## Plot
+
+```{r}
+# PLOT
+profit_v_price <- ggplot(results_df, aes(x = Pr, y = profit, color = Ya)) +
+  geom_point(cex = 2) +
+  labs(
+    x = "Price ($USD/ton)",
+    y = "Profit ($USD)",
+    color = "Yield anomaly\n(ton/acre)"
+  ) +
+  theme_classic()
+profit_v_price
+
+# ggsave(here("Assignments", "profit_v_price.png"), plot = profit_v_price, width = 10, height = 7, dpi = 300)
+```
