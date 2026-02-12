@@ -1,0 +1,106 @@
+---
+title: "Sobol Sensitivity Analysis Assignment"
+author: "Nico Gavigan"
+format: html
+editor: visual
+---
+
+# Part 1
+
+Write a paragraph describing how results of the sensitivity analysis reported on in the paper might contribute to understanding (or prediction) within an environmental problem solving or management context.
+
+------------------------------------------------------------------------
+
+**Selected Paper: Exploring snow model parameter sensitivity using Sobol' variance decomposition (Houle et. al., 2016)**
+
+The Sobol' sensitivity analysis conducted in Houle et. al., 2016 revealed that SNOW-17 (conceptual model) performed slightly better in shallow snowpacks whereas VIC (physics-based model) performed slightly better in deep snowpacks. SNOW-17, a temperature-index model, was most sensitive to the Maximum Melt Factor (MFMAX) parameter whereas VIC, an energy balance model, was most sensitive to Thaw Albedo Decay Parameter (expA2). Houle et. al., suggests that due to SNOW-17's reliance on historical temperature-melt data, its predictive ability is limited under climate change scenarios whereas VIC's full energy-balance accounting increases its predictive potential. Climate warming does not equate to uniformly higher temperatures, but rather, processes governed by radiation, such as albedo decay, play a dominant role. VIC is very sensitive, indicating that accurate parameter inputs are crucial for its predictive performance. This sensitivity analysis may improve environmental decision-making by highlighting the sources of uncertainty, improving model interpretability, and guiding improved predictions for snowmelt-driven hydrolic systems. Uncovering sources of uncertainty can guide research goals towards improving parameter inputs to further improve model predictions and inform proper model selection.
+
+------------------------------------------------------------------------
+
+# Part 2
+
+```{r}
+library(sensitivity)
+library(tidyverse)
+library(purrr)
+library(here)
+```
+
+## Step 1: Generate Parameters 
+
+Note to Ojas, the height in the assignment is reported in m where the equation calls for cm. However, the assignment states that the vegetation is shorter in the assignment than in lecture, so I'm assuming this was a unit error. I am going to proceed with the reported values of 3.5-9.5.
+
+```{r}
+source(here("R/Catm.R"))
+Catm
+# GENERATE TWO SETS OF SAMPLES OF ALL PARAMETERS
+np <- 1000
+k_o <- rnorm(mean = 0.1, sd = 0.1*0.1, n = np)
+k_d <- rnorm(mean = 0.7, sd = 0.7*0.1, n = np)
+v <- rnorm(mean = 300, sd = 50, n = np)
+height <- runif(n = np, min = 3.5, max = 5.5) 
+
+X1 <- cbind.data.frame(k_o, k_d, v, height)
+
+# REPEAT SAMPLING 
+np <- 1000
+k_o <- rnorm(mean = 0.1, sd = 0.1*0.1, n = np)
+k_d <- rnorm(mean = 0.7, sd = 0.7*0.1, n = np)
+v <- rnorm(mean = 300, sd = 50, n = np)
+height <- runif(n = np, min = 3.5, max = 5.5) 
+
+X2 <- cbind.data.frame(k_o, k_d, v, height)
+
+
+sens_Catm_Sobol <- sobolSalt(model = NULL, X1, X2, nboot = 1000)
+```
+
+## Step 2: Compute Sobol Indicies
+
+```{r}
+parms <- as.data.frame(sens_Catm_Sobol$X)
+colnames(parms) <- colnames(X1)
+res <- pmap_dbl(parms, Catm)
+
+sens_Catm_Sobol <- tell(sens_Catm_Sobol, res, res.names = "ga")
+
+row.names(sens_Catm_Sobol$S) <- colnames(parms)
+row.names(sens_Catm_Sobol$T) <- colnames(parms)
+
+sens_Catm_Sobol$S
+sens_Catm_Sobol$T
+
+print(sens_Catm_Sobol)
+```
+
+## Step 3: Plotting 
+
+Plot conductance estimates in a way that accounts for parameter uncertainty
+
+```{r}
+# PLOTTING TWO MOST SENSITIVE PARAMETERS
+both <- cbind.data.frame(parms, gs = sens_Catm_Sobol$y)
+
+q <- quantile(both$gs, probs = c(0.05, 0.5, 0.95), na.rm = TRUE)
+
+ggplot(both, aes(x = gs)) +
+  geom_histogram(bins = 40) +
+  geom_vline(xintercept = q[2], linewidth = 1) +
+  geom_vline(xintercept = q[c(1,3)], linetype = "dashed") +
+  labs(x = "Atmospheric conductance (gs)", y = "Count",
+       title = "Distribution of conductance across parameter uncertainty",
+       subtitle = paste0("Median=", round(q[2],2),
+                         "  (5–95%: ", round(q[1],2), "–", round(q[3],2), ")")) +
+  theme_minimal()
+```
+
+Plot conductance estimates against windspeed use the parameter that is 2nd in terms of total effect on response
+
+```{r}
+ggplot(both, aes(x = gs, y = v, col = k_o)) +
+  geom_point() +
+  labs(y = "Conductance (mm/s)",
+       x = "Windspeed (cm/s)",
+       col = "k_o\nparameter") +
+  theme_minimal()
+```

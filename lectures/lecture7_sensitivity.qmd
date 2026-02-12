@@ -104,6 +104,7 @@ summary(estimate)
 
 
 # but what about rarer infiltration values
+
 pnorm(1.5, mean = 5, sd = 2)
 simple_erosion(I = 2, f = 1.9)
 

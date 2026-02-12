@@ -166,7 +166,7 @@ Add your answer to the Quiz
 
 Exponential Growth - Simple Dynamic System
 
--   *r* rate of growth(change) 
+-   *r* rate of growth(change)
 -   *P* population(density)
 
 Differential equation - $dP$ / $dt$ = $rP$
