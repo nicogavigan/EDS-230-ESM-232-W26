@@ -92,21 +92,31 @@ np <- 2000
 # Assume parameters are normally distributed
 # sample K with mean of 200, standard devidation of  50
 # sample r with mean of 0.02 and standard deviation of 0.005
+K = rnorm(mean = 200, sd = 50, n = np)
+r = rnorm(mean = 0.02, sd = 0.005, n = np)
+X1 = cbind.data.frame(r=r, K=K)
 
 # repeat to get our second set of samples
+K = rnorm(mean = 200, sd = 50, n = np)
+r = rnorm(mean = 0.02, sd = 0.005, n = np)
+X2 = cbind.data.frame(r=r, K=K)
+
+head(X1)
+head(X2)
 
 # fix any negative values and they are not meaningful (using pmax and map_df)
-
-
+X1 = X1 |> map_df(pmax, 0.0)
+X2 = X2 |> map_df(pmax, 0.0)
 # create our sobel object and get sets ofparameters for running the model, use sobolSalt
-
-
+sens_P = sobolSalt(model = NULL, X1, X2, nboot = 300)
+str(sens_P)
 
 # take a look at parameter sets
-
+# it gives us back X which is the parameter sets it wants us to run
+head(sens_P$X)
 
 # lets add names
-
+colnames(sens_P$X) = c("r", "K")
 ```
 
 ## Running the ODE and summarizing output {.scrollable}
@@ -146,31 +156,34 @@ Create two additional functions that will help us
 ```{r sen2}
 # turn computing our metrics into a function, have thresh be an input
 
+# result is running ODE over a given number of years 
 compute_pop_metrics <- function(result, thresh) {
   # first add maximum population
+  maxpop <- max(result$P)
   
   # find when populatin is greater than the threshold
-
+  idx <- which(result$P > thresh)[1]
   # account for sitation with threshold is never reached
-
-  # return results (maxpop and threshyear) as a list
- 
+  idx <- ifelse(is.na(idx), length(result$P), idx)
+  threshyear <- result$time[idx]
+  # return results
+  return(list(maxpop = maxpop, threshyear = threshyear))
 }
 
 # Test that it works
 # try it on our first parameter set, and look at when it gets to 100
 # initial population
-
+Pinitial = 10
 # run for 500 days, save as a variable for later resue
-
+simtimes = seq(from=1, to=500, by=2)
 # use the first parameter set (or you could just pick a test value), not the list because ode wants parameters as a list, so name each
-
+parmtest = list(r=sens_P$X[1,"r"], K = sens_P$X[1,"K"])
 # run ode
-
+result = ode(y = Pinitial, times = simtimes, func = dpopgrowth, parms = parmtest)
 # turn ode results into a labelled data frame 
-
+result = data.frame(time = result[,1], P = result[,2])
 # run metrics on results, lets use a threshold of 100
-
+compute_pop_metrics(result, 100)
 
 # great but we need to apply the ode and this function for all of our parameters
 
@@ -181,20 +194,24 @@ compute_pop_metrics <- function(result, thresh) {
 p_wrapper <- function(r, K, Pinitial, simtimes, odefunc, metricfunc, metricpars) {
   
   # create parameter list
-
+  parms = list(r=r, K=K)
   # run ode
-  
+  result = ode(y=Pinitial, times=simtimes, func = odefunc, parms=parms, method="euler")
   # results as a data frame
- 
+  result = data.frame(time=result[,1], P=result[,2])
   # get metrics
-  
+  metrics = metricfunc(result, metricpars$thresh)
   # compute metrics
   
   return(metrics)
 }
 
 # test with specific r and K values (r=0.01, K=150) and Pinitial=3 # just do 10 time steps
-
+metricpars = list(thresh = 10)
+p_wrapper(
+  r = 0.01, K = 150, Pinitial = 3, simtimes = seq(from = 1, to = 10),
+  odefunc = dpopgrowth, metricfunc = compute_pop_metrics, metricpars = metricpars
+)
 
 # try with first row of our Sobol parameters
 # Pinitial=10, use our simtimes
@@ -207,14 +224,19 @@ Run the wrapper for all parameters and look at results
 
 ```{r userwarpper, error=TRUE}
 # now use pmap as we did before, but run the wrapper function
-
-
+allresults = as.data.frame(sens_P$X) |> pmap(p_wrapper, Pinitial=Pinitial, simtimes=simtimes,
+                                             odefunc=dpopgrowth, metricfunc=compute_pop_metrics,
+                                             metricpars=list(thresh=100))
 # extract out results from pmap into a data frame
-
+allres = allresults |> map_dfr(`[`, c("maxpop", "threshyear"))
+head(allres)
 # do a quick summary to get a sense of the range
-
+summary(allres)
 # create boxplots of our two metrics for all parameters - use facet wrap since population and year are different y-axis
-
+tmp = allres |> pivot_longer(cols = everything(), names_to = "metric", values_to = "value")
+ggplot(tmp, aes(metric, value)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free")
 ```
 
 ## Compute the sobol indicies for each metric {.scrollable}
@@ -227,19 +249,27 @@ Run the wrapper for all parameters and look at results
 
 ```{r sen3}
 # sobol can only handle one output at a time  - so we will need to do them separately
-
-
+str(sens_P)
 # lets start with threshyear
+sens_P_threshyear = sensitivity::tell(sens_P, allres$threshyear)
+
 # "tell" the sensitivity analysis object - re-name so we keep separate
 
 # first-order indices (main effect without co-variance)
-
+sens_P_threshyear$S
+rownames(sens_P_threshyear$S) = c("r", "K")
 # total sensitivity index -note that this partitions the output variance - so values sum to 1
-
-
+sens_P_threshyear$T
+rownames(sens_P_threshyear$T) = c("r", "K")
 # graph metric against most parameter that the output is most sensitive to, using #2 for color
-# create a data frame
 
+
+# create a data frame
+allresp = as.data.frame(cbind(sens_P$X, allres))
+ggplot(allresp, aes(K, threshyear, col = r)) +
+  geom_point() +
+  labs(y = "Year that threshold is reached", 
+       x = "K")
 ```
 
 ## Repeat for Maximum Population Reached {.scrollable}

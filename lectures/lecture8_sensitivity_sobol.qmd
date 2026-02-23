@@ -280,7 +280,13 @@ ggplot(both, aes(k_d, gs, col = k_o)) +
 # use second most sensitive parameter (using most important as color)
 ggplot(both, aes(k_o, gs, col = k_d)) +
   geom_point() +
-  labs(y = "Conductance (mm/s)", x = "k_d parameter")
+  labs(y = "Conductance (mm/s)", x = "k_o parameter")
+
+ggplot(both, aes(x = v, y = gs, col = k_o)) +
+  geom_point() +
+  labs(y = "conductance",
+       x = "windspeed") +
+  theme_minimal()
 ```
 
 ## Second order indices {.scrollable}

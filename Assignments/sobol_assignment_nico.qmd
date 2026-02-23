@@ -1,8 +1,17 @@
 ---
 title: "Sobol Sensitivity Analysis Assignment"
 author: "Nico Gavigan"
-format: html
-editor: visual
+output: html_document
+format: 
+  html:
+    embed-resources: true
+    code-fold: true
+    toc: true
+execute: 
+  warning: false
+  message: false
+theme: "minty"
+df-print: kable
 ---
 
 # Part 1
@@ -19,16 +28,16 @@ The Sobol' sensitivity analysis conducted in Houle et. al., 2016 revealed that S
 
 # Part 2
 
-```{r}
+```{r, message=FALSE}
 library(sensitivity)
 library(tidyverse)
 library(purrr)
 library(here)
 ```
 
-## Step 1: Generate Parameters 
+## Step 1: Generate Parameters
 
-Note to Ojas, the height in the assignment is reported in m where the equation calls for cm. However, the assignment states that the vegetation is shorter in the assignment than in lecture, so I'm assuming this was a unit error. I am going to proceed with the reported values of 3.5-9.5.
+Note to Ojas, the height in the assignment is reported in m where the equation calls for cm. However, the assignment states that the vegetation is shorter in the assignment than in lecture, so I'm assuming this was a unit error. I am going to proceed with the reported values of 3.5-5.5.
 
 ```{r}
 source(here("R/Catm.R"))
@@ -55,7 +64,7 @@ X2 <- cbind.data.frame(k_o, k_d, v, height)
 sens_Catm_Sobol <- sobolSalt(model = NULL, X1, X2, nboot = 1000)
 ```
 
-## Step 2: Compute Sobol Indicies
+## Step 2: Run model and compute Sobol indicies
 
 ```{r}
 parms <- as.data.frame(sens_Catm_Sobol$X)
@@ -69,11 +78,10 @@ row.names(sens_Catm_Sobol$T) <- colnames(parms)
 
 sens_Catm_Sobol$S
 sens_Catm_Sobol$T
-
 print(sens_Catm_Sobol)
 ```
 
-## Step 3: Plotting 
+## Step 3: Plotting
 
 Plot conductance estimates in a way that accounts for parameter uncertainty
 
@@ -104,3 +112,13 @@ ggplot(both, aes(x = gs, y = v, col = k_o)) +
        col = "k_o\nparameter") +
   theme_minimal()
 ```
+
+# Discussion
+
+*Comment on what this tells you about how atmospheric conductance and its sensitivity to variation in windspeed differs in this setting as compared to the setting that we examined in class where windspeed was lower and less variable and vegetation was taller.*
+
+In this assignment where windspeeds increase and are more variable and vegetation height decreases, windspeed becomes the most explanatory variable of output variance. Windspeed is responsible for 46% of the output variance and 50% of the overall variance. Having a high first-order index and high total index means that there is both a strong independent effect and little interaction dependence.
+
+With the lecture model where height is higher and windspeed is lower and less variable, the k_d parameter was most responsible for variance. Windspeed was only 21% explanatory. This system was driven by the parameters. Comparing the two models shows that atmospheric conductance is very influenced by environmental conditions.
+
+The difference in the height indicies (S = 0.07 in lecture; S = 0.13 in assignment) indicates that the height variable has little explanatory power and is not very influential in conductance.

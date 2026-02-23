@@ -1,4 +1,4 @@
----
+------------------------------------------------------------------------
 
 ---
 title: "Sobol Sensitivity Analysis Assignment"
@@ -68,6 +68,8 @@ Run the atmospheric conductance model for these parameters
 Plot conductance estimates in a way that accounts for parameter uncertainty
 
 Plot conductance estimates against windspeed use the parameter that is 2nd in terms of total effect on response
+
+------------------------------------------------------------------------
 
 Estimate the Sobel Indices for your output
 
