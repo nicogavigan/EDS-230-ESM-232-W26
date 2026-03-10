@@ -1,0 +1,156 @@
+---
+title: "Assignment 6: Using Sobol with an ODE"
+author: "Nico Gavigan"
+format: 
+  pdf:
+    toc: true
+execute: 
+  warning: false
+  message: false
+df-print: kable
+---
+
+# Using Sobol with an ODE 
+
+```{r, echo=FALSE}
+library(sensitivity)
+library(tidyverse)
+library(deSolve)
+library(lhs)
+library(purrr)
+library(here)
+library(ggpubr)
+```
+
+#### Run Forest Growth Model
+
+```{r}
+# Source forest growth model
+source(here("R/dcarbon.r"))
+dcarbon
+
+# Create parameters and set conditions
+parms = list(thresh = 50, K = 250, r = 0.01, g = 2)
+initialC = 10
+time = seq(from = 1, to = 300, by = 5)
+
+# run forest growth model
+forestgrowth = ode(func = dcarbon, y = initialC, times = time, parms = parms)
+```
+
+#### Plot model output
+
+```{r}
+# Assign column names
+colnames(forestgrowth) <- c("time", "carbon")
+
+# Plot model output
+ggplot(as.data.frame(forestgrowth), aes(time, carbon)) +
+  geom_line() +
+  labs(y = "Forest Size (kg C)",
+       x = "Time") +
+  theme_minimal() 
+```
+
+## Begin Sobol Global Sensitivity Analysis
+
+```{r}
+# Sobol Global Sensitivity Analysis 
+# Create X1 data frame
+np = 300
+thresh = rnorm(mean = 50, sd = 50*0.1, n = np)
+K = rnorm(mean = 250, sd = 250*0.1, n = np)
+r = rnorm(mean = 0.01, sd = 0.01*0.1, n = np)
+g = rnorm(mean = 2, sd = 2*0.1, n = np)
+
+X1 = cbind.data.frame(thresh = thresh, K = K, r = r, g = g)
+
+# Create X2 data frame
+np = 300
+thresh = rnorm(mean = 50, sd = 50*0.1, n = np)
+K = rnorm(mean = 250, sd = 250*0.1, n = np)
+r = rnorm(mean = 0.01, sd = 0.01*0.1, n = np)
+g = rnorm(mean = 2, sd = 2*0.1, n = np)
+
+X2 = cbind.data.frame(thresh = thresh, K = K, r = r, g = g)
+
+# Run SobolSalt
+sensCarbon = sobolSalt(model = NULL, X1, X2, nboot = 300)
+colnames(sensCarbon$X) = c("thresh", "K", "r", "g")
+
+head(sensCarbon$X)
+```
+
+```{r, echo=FALSE}
+# Checking to make sure it works 
+initialC <- 10
+parms <- list(thresh = sensCarbon$X[1, 1], K = sensCarbon$X[1, 2], r = sensCarbon$X[1, 3], 
+              g = sensCarbon$X[1,4])
+
+res <- ode(y = initialC, times = time, func = dcarbon, parms = parms)
+res <- as.data.frame(res)
+colnames(res) <- c("time", "C")
+
+ggplot(res, aes(time, C)) +
+  geom_line()
+```
+
+## How does maximum forest size over 300 years vary with these parameters?
+
+#### Create Metric Function
+
+```{r}
+max_C = function(result){
+  max(result$C)
+}
+```
+
+#### Create wrapper function
+
+```{r}
+# Wrapper function
+p_wrapper <- function(thresh, K, r, g, time, initialC, odefunc, parms, metricfunc) {
+  parms <- list(thresh = thresh, K = K, r = r, g = g)
+  result <- ode(y = initialC, times = time, func = odefunc, parms = parms)
+  result <- as.data.frame(result)
+  colnames(result) <- c("time", "C")
+  # get metrics
+  metrics <- metricfunc(result)
+  return(metrics)
+}
+```
+
+#### Extract Results 
+
+```{r}
+allresults <- as.data.frame(sensCarbon$X) %>% pmap_dbl(p_wrapper, initialC = initialC, 
+                                                       time = time, odefunc = dcarbon,
+                                                       metricfunc = max_C)
+allresults_df <- data.frame(max_carbon = allresults)
+
+head(allresults_df)
+```
+
+#### Plot Results
+
+```{r}
+ggplot(allresults_df, aes(y = max_carbon)) +
+  geom_boxplot() +
+  labs(y = "Maximum Forest Size") +
+  theme_minimal()
+```
+
+#### Create Sobol Indicies
+
+```{r}
+sensCarbon_300 = tell(sensCarbon, allresults)
+
+rownames(sensCarbon_300$S) = c("thresh", "K", "r", "g")
+sensCarbon_300$S
+rownames(sensCarbon_300$T) = c("thresh", "K", "r", "g")
+sensCarbon_300$T
+```
+
+------------------------------------------------------------------------
+
+The Sobol first and total order indicies reveal that r, the early exponential growth rate and K, the carrying capacity are the top two most important variables to forest growth. In the context of climate change, factors that impact growth rate (eg. temperature, fertilization, water availability) will have the most significant impact on forest growth. Factors affecting carrying capacity, such as wildfire disturbances and max carbon storage, will have the second greatest impact on forest growth.

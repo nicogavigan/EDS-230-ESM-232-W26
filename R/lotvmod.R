@@ -29,3 +29,10 @@ lotvmod <- function(t, pop, pars) {
     return(list(c(dprey, dpred)))
   })
 }
+
+
+
+
+
+
+

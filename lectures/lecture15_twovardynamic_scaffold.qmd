@@ -121,14 +121,18 @@ source(here("R/lotvmod.R"))
 lotvmod
 
 # note the use of with
+# with makes it so that you dont have to keep writing the $ in the pars and parms variables
 # initial conditions
+currpop = c(prey = 10, pred = 1)
 
 # time points to see results
+days = seq(from=1, to=100, by=1)
 
 # set parameters
+pars = c(rprey=0.5, alpha=0.3, eff=0.2, pmort=0.2)
 
 # run the model
-
+res = ode(func=lotvmod, y=currpop, times=days, parms=pars)
 ```
 
 ## Run this model - how would you visualize results?
@@ -152,13 +156,23 @@ lotvmod
 # graph the results
 head(res)
 # rearrange for easy plotting
+resl = as.data.frame(res) |>
+  pivot_longer(-time, names_to = "animal", values_to = "pop")
 
 # first plot against time - use color for pred vs prey
+p1 = ggplot(as.data.frame(res), aes(pred, prey)) +
+  geom_point() +
+  labs(y="Prey",
+       x="Pred") # we can see that there is not a unique relationship between predators and prey
 
 # plot interactions x-y (pred vs prey) - use color for time)
-
+p2 = ggplot(resl, aes(time, pop, color=animal)) +
+  geom_line() +
+  labs(y = "pop",
+       x = "time")
 
 # plot side by side with ggarrange
+
 ```
 
 # Try other parameters {.scrollable}
@@ -431,7 +445,7 @@ sobol_sumS
 
 -   simple mathematical definition - when derivatives are zero
 
-    -   algerbra
+    -   algebra
     -   plotting
 
 -   more complex definitions - think of metrics that looks at ranges, cycling, return to a population above some threshold after disturbance
